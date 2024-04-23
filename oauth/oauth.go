@@ -436,7 +436,7 @@ func (c *Client) rsaSignature(r *request, h crypto.Hash, oauthParams map[string]
 // information about transmitting OAuth parameters in a request body and
 // http://tools.ietf.org/html/rfc5849#section-3.5.2 for information about
 // transmitting OAuth parameters in a query string.
-func (c *Client) SignForm(credentials *Credentials, method, urlStr string, form url.Values) error {
+func (c *Client) SignForm(credentials *Credentials, method, urlStr string, form url.Values, verifier string, callbackURL string) error {
 	u, err := url.Parse(urlStr)
 	switch {
 	case err != nil:
@@ -444,7 +444,7 @@ func (c *Client) SignForm(credentials *Credentials, method, urlStr string, form 
 	case u.RawQuery != "":
 		return errors.New("oauth: urlStr argument to SignForm must not include a query string")
 	}
-	p, err := c.oauthParams(&request{credentials: credentials, method: method, u: u, form: form})
+	p, err := c.oauthParams(&request{credentials: credentials, method: method, u: u, form: form, verifier: verifier, callbackURL: callbackURL})
 	if err != nil {
 		return err
 	}
@@ -653,15 +653,15 @@ func (c *Client) RequestTemporaryCredentialsContext(ctx context.Context, callbac
 // RequestToken requests token credentials from the server. See
 // http://tools.ietf.org/html/rfc5849#section-2.3 for information about token
 // credentials.
-func (c *Client) RequestToken(client *http.Client, temporaryCredentials *Credentials, verifier string) (*Credentials, url.Values, error) {
+func (c *Client) RequestToken(client *http.Client, temporaryCredentials *Credentials, verifier string, values url.Values) (*Credentials, url.Values, error) {
 	ctx := context.WithValue(context.Background(), HTTPClient, client)
-	return c.RequestTokenContext(ctx, temporaryCredentials, verifier)
+	return c.RequestTokenContext(ctx, temporaryCredentials, verifier, values)
 }
 
 // RequestTokenContext uses Context to perform RequestToken.
-func (c *Client) RequestTokenContext(ctx context.Context, temporaryCredentials *Credentials, verifier string) (*Credentials, url.Values, error) {
+func (c *Client) RequestTokenContext(ctx context.Context, temporaryCredentials *Credentials, verifier string, values url.Values) (*Credentials, url.Values, error) {
 	return c.requestCredentials(ctx, c.TokenRequestURI,
-		&request{credentials: temporaryCredentials, method: c.TokenCredentailsMethod, verifier: verifier})
+		&request{credentials: temporaryCredentials, method: c.TokenCredentailsMethod, form: values, verifier: verifier})
 }
 
 // RenewRequestCredentials requests new token credentials from the server.
